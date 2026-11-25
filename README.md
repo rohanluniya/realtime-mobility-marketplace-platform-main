@@ -80,8 +80,7 @@ Backed by raw measurements in [`results/benchmarks/h3_resolution_tradeoffs.json`
 Runs the complete pipeline, Apache Iceberg V2 lakehouse, DuckDB analytics, versioned KV serving store, FastAPI API, and Control Tower UI inside one self-contained container:
 
 ```bash
-git clone <repo-url>
-cd realtime-mobility-marketplace-platform
+git clone https://github.com/rohanluniya/realtime-mobility-marketplace-platform-main.git realtime-mobility-marketplace-platform
 docker compose -f docker-compose.standalone.yml up --build
 ```
 
@@ -90,8 +89,7 @@ Open **`http://localhost:8010`** in your browser. To run the larger stress datas
 ### Option 2 — Zero-Docker Portable Script (macOS / Linux with Python 3.12+ or `uv`)
 
 ```bash
-git clone <repo-url>
-cd realtime-mobility-marketplace-platform
+git clone https://github.com/rohanluniya/realtime-mobility-marketplace-platform-main.git realtime-mobility-marketplace-platform
 ./scripts/run_portable.sh local
 ```
 
