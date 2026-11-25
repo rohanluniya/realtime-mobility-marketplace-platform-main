@@ -1,0 +1,315 @@
+# =============================================================================
+# Real-Time Mobility Marketplace & Dynamic Pricing Platform
+# Full Distributed Open-Source Stack (Pinned Multi-Arch Releases · No Floating Tags)
+#
+# Profiles:
+#   core          -> Kafka 4.3.2 (KRaft) + Apicurio 3.3.5 + Valkey 9.2.0 +
+#                    RustFS 1.0.6 + Lakekeeper v0.15.1 + PostGIS 17-3.6.1 +
+#                    Marketplace API & Control Tower
+#   streaming     -> + Debezium 3.7.1 + Apache Flink 2.1.3 (JobManager & TaskManager)
+#   analytics     -> + Apache Spark 4.1.4 + Trino 484 + Apache Airflow 3.4.0
+#   observability -> + Prometheus v3.16.0 + Grafana 13.0.14 + Loki 3.6.22 +
+#                    OpenTelemetry Collector 0.166.0 + Marquez 0.51.1
+#   full          -> All services above
+# =============================================================================
+
+services:
+  # ------------------------- CORE DATA BACKBONE ------------------------------
+  kafka:
+    image: apache/kafka:4.3.2
+    container_name: mkt-kafka
+    profiles: ["core", "streaming", "analytics", "full"]
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - kafka_data:/tmp/kraft-combined-logs
+
+  apicurio:
+    image: apicurio/apicurio-registry:3.3.5
+    container_name: mkt-apicurio
+    profiles: ["core", "streaming", "full"]
+    ports:
+      - "8081:8080"
+    environment:
+      APICURIO_STORAGE_KIND: mem
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  valkey:
+    image: valkey/valkey:9.2.0-alpine3.24
+    container_name: mkt-valkey
+    profiles: ["core", "streaming", "full"]
+    command: ["valkey-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "volatile-ttl"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - valkey_data:/data
+
+  rustfs:
+    image: rustfs/rustfs:1.0.6
+    container_name: mkt-rustfs
+    profiles: ["core", "analytics", "full"]
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-marketplace_s3_key}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:-marketplace_s3_secret_change_me}
+    volumes:
+      - rustfs_data:/data
+
+  postgres:
+    image: imresamu/postgis:17-3.6.1-alpine3.23
+    container_name: mkt-postgres
+    profiles: ["core", "streaming", "analytics", "full"]
+    ports:
+      - "5432:5432"
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_replication_slots=8"
+      - "-c"
+      - "max_wal_senders=8"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-marketplace}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-marketplace_dev_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-marketplace_ops}
+    volumes:
+      - ./pipelines/cdc/01_marketplace_ops_schema.sql:/docker-entrypoint-initdb.d/01_marketplace_ops_schema.sql:ro
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-marketplace} -d ${POSTGRES_DB:-marketplace_ops}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  lakekeeper:
+    image: quay.io/lakekeeper/catalog:v0.15.1
+    container_name: mkt-lakekeeper
+    profiles: ["core", "analytics", "full"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8181:8181"
+    environment:
+      LAKEKEEPER__PG_DATABASE_URL_READ: postgresql://${POSTGRES_USER:-marketplace}:${POSTGRES_PASSWORD:-marketplace_dev_pass}@postgres:5432/${POSTGRES_DB:-marketplace_ops}
+      LAKEKEEPER__PG_DATABASE_URL_WRITE: postgresql://${POSTGRES_USER:-marketplace}:${POSTGRES_PASSWORD:-marketplace_dev_pass}@postgres:5432/${POSTGRES_DB:-marketplace_ops}
+      LAKEKEEPER__PG_ENCRYPTION_KEY: ${LAKEKEEPER_ENCRYPTION_KEY:-dev-local-encryption-key-change-me}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8181/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  marketplace-api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.python
+    container_name: mkt-api
+    profiles: ["core", "full"]
+    depends_on:
+      valkey:
+        condition: service_healthy
+    ports:
+      - "${MARKETPLACE_API_PORT:-8010}:8010"
+    environment:
+      MARKETPLACE_ENV: docker
+      MARKETPLACE_EXECUTION_PROFILE: docker_distributed
+      MARKETPLACE_TRANSPORT_MODE: kafka
+      MARKETPLACE_SERVING_STORE: valkey
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      VALKEY_HOST: valkey
+      VALKEY_PORT: 6379
+      ICEBERG_REST_URI: http://lakekeeper:8181/catalog
+      S3_ENDPOINT_URL: http://rustfs:9000
+      MARKETPLACE_API_HOST: 0.0.0.0
+      MARKETPLACE_API_PORT: 8010
+      MARKETPLACE_API_ADMIN_TOKEN: ${MARKETPLACE_API_ADMIN_TOKEN:-dev-mkt-admin-token}
+      MARKETPLACE_API_OPERATOR_TOKEN: ${MARKETPLACE_API_OPERATOR_TOKEN:-dev-mkt-operator-token}
+      MARKETPLACE_API_ANALYST_TOKEN: ${MARKETPLACE_API_ANALYST_TOKEN:-dev-mkt-analyst-token}
+    command: ["uvicorn", "main:app", "--app-dir", "/app/apps/marketplace-api", "--host", "0.0.0.0", "--port", "8010"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8010/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ------------------------- STREAMING & CDC LAYER ---------------------------
+  debezium:
+    image: quay.io/debezium/connect:3.7.1.Final
+    container_name: mkt-debezium
+    profiles: ["streaming", "full"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: marketplace-cdc-connect
+      CONFIG_STORAGE_TOPIC: marketplace_connect_configs
+      OFFSET_STORAGE_TOPIC: marketplace_connect_offsets
+      STATUS_STORAGE_TOPIC: marketplace_connect_statuses
+
+  flink-jobmanager:
+    image: flink:2.1.3-scala_2.12-java17
+    container_name: mkt-flink-jm
+    profiles: ["streaming", "full"]
+    command: jobmanager
+    ports:
+      - "8082:8081"
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        state.backend.type: rocksdb
+        execution.checkpointing.interval: 30000
+        execution.checkpointing.mode: EXACTLY_ONCE
+    volumes:
+      - ./streaming:/opt/marketplace/streaming:ro
+
+  flink-taskmanager:
+    image: flink:2.1.3-scala_2.12-java17
+    container_name: mkt-flink-tm
+    profiles: ["streaming", "full"]
+    depends_on:
+      - flink-jobmanager
+    command: taskmanager
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 4
+        state.backend.type: rocksdb
+    volumes:
+      - ./streaming:/opt/marketplace/streaming:ro
+
+  # ------------------------- ANALYTICS & ORCHESTRATION -----------------------
+  spark:
+    image: apache/spark:4.1.4-scala2.13-java17-python3-ubuntu
+    container_name: mkt-spark
+    profiles: ["analytics", "full"]
+    command: ["sleep", "infinity"]
+    environment:
+      ICEBERG_REST_URI: http://lakekeeper:8181/catalog
+      S3_ENDPOINT: http://rustfs:9000
+      OPENLINEAGE_URL: http://marquez:5000
+    volumes:
+      - ./pipelines/spark:/opt/marketplace/spark:ro
+
+  trino:
+    image: trinodb/trino:484
+    container_name: mkt-trino
+    profiles: ["analytics", "full"]
+    depends_on:
+      - lakekeeper
+    ports:
+      - "8084:8080"
+    environment:
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-marketplace_s3_key}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-marketplace_s3_secret_change_me}
+    volumes:
+      - ./infra/docker/trino/catalog:/etc/trino/catalog:ro
+
+  airflow:
+    image: apache/airflow:slim-3.4.0-python3.12
+    container_name: mkt-airflow
+    profiles: ["analytics", "full"]
+    ports:
+      - "8085:8080"
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    command: ["standalone"]
+    volumes:
+      - ./pipelines/airflow/dags:/opt/airflow/dags:ro
+
+  # ------------------------- OBSERVABILITY & LINEAGE -------------------------
+  prometheus:
+    image: prom/prometheus:v3.16.0
+    container_name: mkt-prometheus
+    profiles: ["observability", "full"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+
+  loki:
+    image: grafana/loki:3.6.22
+    container_name: mkt-loki
+    profiles: ["observability", "full"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./infra/monitoring/loki-config.yaml:/etc/loki/local-config.yaml:ro
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.166.0-${OTEL_ARCH:-arm64}
+    container_name: mkt-otel
+    profiles: ["observability", "full"]
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./infra/monitoring/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+
+  grafana:
+    image: grafana/grafana:13.0.14
+    container_name: mkt-grafana
+    profiles: ["observability", "full"]
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin_change_me}
+    volumes:
+      - ./infra/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+  marquez:
+    image: marquezproject/marquez:0.51.1
+    platform: linux/amd64
+    container_name: mkt-marquez
+    profiles: ["observability", "full"]
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    environment:
+      MARQUEZ_PORT: 5000
+      MARQUEZ_ADMIN_PORT: 5001
+
+volumes:
+  kafka_data:
+  valkey_data:
+  rustfs_data:
+  pg_data:

@@ -1,0 +1,32 @@
+{
+  "type": "record",
+  "name": "MatchingOutcomeEvent",
+  "namespace": "io.marketplace.events.v1",
+  "doc": "Joined request-offer-acceptance-trip marketplace matching outcome.",
+  "fields": [
+    {"name": "outcome_id", "type": "string"},
+    {"name": "request_id", "type": "string"},
+    {"name": "trip_id", "type": ["null", "string"], "default": null},
+    {"name": "rider_id", "type": "string"},
+    {"name": "driver_id", "type": ["null", "string"], "default": null},
+    {"name": "city_id", "type": "string"},
+    {"name": "region_id", "type": "string"},
+    {"name": "h3_cell_res7", "type": "string"},
+    {"name": "service_type", "type": "string"},
+    {"name": "request_time", "type": "string"},
+    {"name": "outcome_time", "type": "string"},
+    {"name": "final_status", "type": "string"},
+    {"name": "request_to_offer_ms", "type": ["null", "long"], "default": null},
+    {"name": "offer_to_accept_ms", "type": ["null", "long"], "default": null},
+    {"name": "request_to_match_ms", "type": ["null", "long"], "default": null},
+    {"name": "offers_sent", "type": "int"},
+    {"name": "offers_rejected", "type": "int"},
+    {"name": "pricing_multiplier", "type": "double"},
+    {"name": "policy_version", "type": "string"},
+    {"name": "experiment_variant", "type": ["null", "string"], "default": null},
+    {"name": "estimated_pickup_seconds", "type": ["null", "double"], "default": null},
+    {"name": "trip_completed", "type": "boolean"},
+    {"name": "cancelled_by", "type": ["null", "string"], "default": null},
+    {"name": "schema_version", "type": "string", "default": "1.0.0"}
+  ]
+}

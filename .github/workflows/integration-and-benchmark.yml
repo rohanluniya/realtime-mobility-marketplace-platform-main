@@ -1,0 +1,39 @@
+name: Benchmarks & Standalone Container Verification
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  benchmarks-and-container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.9.5"
+
+      - name: Sync locked dependencies
+        run: uv sync --frozen --extra dev
+
+      - name: Execute load, H3 multi-resolution, and Iceberg benchmarks
+        run: PYTHONPATH=. uv run python benchmarks/run_load_and_h3_benchmarks.py
+
+      - name: Build standalone portable container
+        run: docker build -f infra/docker/Dockerfile.standalone -t marketplace-standalone:ci .
+
+      - name: Smoke test standalone container health endpoint
+        run: |
+          docker run -d --name mkt-ci -p 8010:8010 -e MARKETPLACE_SIM_PROFILE=smoke marketplace-standalone:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8010/health; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8010/marketplace/pricing | head -c 300
+          docker rm -f mkt-ci

@@ -1,0 +1,3 @@
+# Container-isolated Python pins for Apache Flink 2.1.3 DataStream workers
+apache-flink==2.1.3
+h3==4.5.0

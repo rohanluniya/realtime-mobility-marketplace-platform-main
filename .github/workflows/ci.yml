@@ -1,0 +1,57 @@
+name: CI · Lint, Typecheck, Contracts, E2E & Chaos
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.9.5"
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Sync locked dependencies
+        run: uv sync --frozen --extra dev
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Type check (mypy)
+        run: uv run mypy marketplace_platform apps/marketplace-api/security.py
+
+      - name: Verify open-source dependency licenses
+        run: uv run python scripts/check_licenses.py
+
+      - name: Validate YAML & JSON configs (zero :latest Docker tags)
+        run: |
+          uv run python -c "
+          import json, pathlib, yaml
+          for p in pathlib.Path('.').rglob('*.json'):
+              if '.venv' in p.parts or '.local_data' in p.parts: continue
+              json.loads(p.read_text())
+          for p in list(pathlib.Path('.').rglob('*.yml')) + list(pathlib.Path('.').rglob('*.yaml')):
+              if '.venv' in p.parts or '.local_data' in p.parts: continue
+              list(yaml.safe_load_all(p.read_text()))
+          compose = pathlib.Path('docker-compose.yml').read_text()
+          assert ':latest' not in compose, 'Floating :latest image tag forbidden!'
+          print('All JSON/YAML valid and zero :latest tags confirmed.')
+          "
+
+      - name: Run full unit, contract, integration, and chaos tests
+        run: uv run pytest -v
+
+      - name: Generate CycloneDX SBOM
+        run: uv run python scripts/generate_sbom.py

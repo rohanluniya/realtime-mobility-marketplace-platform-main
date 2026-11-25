@@ -1,0 +1,55 @@
+{
+  "title": "Mobility Marketplace Operations & Pricing SLOs",
+  "uid": "mobility-marketplace-ops",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Serving Store Lookup p95 (ms)",
+      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 5},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(marketplace_serving_store_latency_seconds_bucket{operation=\"get\"}[5m])) * 1000"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "DLQ Quarantined Messages",
+      "gridPos": {"x": 6, "y": 0, "w": 6, "h": 5},
+      "targets": [{"expr": "sum(marketplace_dlq_messages_total)"}]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Serving Reconciliation Repairs",
+      "gridPos": {"x": 12, "y": 0, "w": 6, "h": 5},
+      "targets": [{"expr": "sum(marketplace_reconciliation_drift_corrected_total)"}]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "DQ Check Failures",
+      "gridPos": {"x": 18, "y": 0, "w": 6, "h": 5},
+      "targets": [{"expr": "sum(marketplace_dq_checks_total{status=\"FAIL\"})"}]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "API Request Rate by Endpoint",
+      "gridPos": {"x": 0, "y": 5, "w": 12, "h": 8},
+      "targets": [{"expr": "sum by (endpoint) (rate(marketplace_api_requests_total[1m]))"}]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Pricing Decisions Emitted by Policy Version",
+      "gridPos": {"x": 12, "y": 5, "w": 12, "h": 8},
+      "targets": [{"expr": "sum by (policy_version) (rate(marketplace_pricing_decisions_total[5m]))"}]
+    }
+  ]
+}

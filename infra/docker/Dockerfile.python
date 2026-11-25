@@ -1,0 +1,21 @@
+FROM python:3.12.8-slim-bookworm
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml README.md LICENSE ./
+COPY marketplace_platform ./marketplace_platform
+COPY schemas ./schemas
+COPY services ./services
+COPY apps ./apps
+
+RUN pip install --upgrade pip && pip install .
+
+RUN useradd --create-home --shell /bin/bash appuser && chown -R appuser:appuser /app
+USER appuser

@@ -1,0 +1,25 @@
+services:
+  marketplace-platform:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.standalone
+    container_name: realtime-mobility-marketplace-standalone
+    ports:
+      - "${MARKETPLACE_API_PORT:-8010}:8010"
+    environment:
+      MARKETPLACE_SIM_PROFILE: ${MARKETPLACE_SIM_PROFILE:-local}
+      MARKETPLACE_API_ADMIN_TOKEN: ${MARKETPLACE_API_ADMIN_TOKEN:-dev-mkt-admin-token}
+      MARKETPLACE_API_OPERATOR_TOKEN: ${MARKETPLACE_API_OPERATOR_TOKEN:-dev-mkt-operator-token}
+      MARKETPLACE_API_ANALYST_TOKEN: ${MARKETPLACE_API_ANALYST_TOKEN:-dev-mkt-analyst-token}
+    volumes:
+      - marketplace_standalone_data:/app/.local_data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8010/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  marketplace_standalone_data:

@@ -1,0 +1,18 @@
+{
+  "type": "record",
+  "name": "DeadLetterEvent",
+  "namespace": "io.marketplace.events.v1",
+  "doc": "Quarantined poison or schema-invalid event routed to marketplace.dead-letter.",
+  "fields": [
+    {"name": "dlq_id", "type": "string"},
+    {"name": "source_topic", "type": "string"},
+    {"name": "source_partition", "type": "int"},
+    {"name": "source_offset", "type": "long"},
+    {"name": "error_code", "type": "string"},
+    {"name": "error_message", "type": "string"},
+    {"name": "quarantined_at", "type": "string"},
+    {"name": "raw_payload_b64", "type": "string"},
+    {"name": "correlation_id", "type": "string"},
+    {"name": "schema_version", "type": "string", "default": "1.0.0"}
+  ]
+}

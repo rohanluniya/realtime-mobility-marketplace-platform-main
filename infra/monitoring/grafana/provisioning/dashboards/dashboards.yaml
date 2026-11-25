@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: Marketplace Operations
+    orgId: 1
+    folder: Mobility Marketplace
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

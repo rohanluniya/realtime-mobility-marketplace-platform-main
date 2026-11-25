@@ -1,0 +1,95 @@
+{
+  "suite": "marketplace_chaos_and_fault_injection",
+  "executed_at_utc": "2026-11-25T02:10:50.328429+00:00",
+  "passed": 9,
+  "failed": 0,
+  "total": 9,
+  "scenarios": [
+    {
+      "scenario": "broker_outage_and_recovery",
+      "status": "PASS",
+      "duration_ms": 17.25,
+      "metrics": {
+        "partition": 3,
+        "offset": 0,
+        "records_recovered": 1
+      }
+    },
+    {
+      "scenario": "stream_processor_crash_and_checkpoint_parity",
+      "status": "PASS",
+      "duration_ms": 199.88,
+      "metrics": {
+        "cells_verified": 67,
+        "exact_multiplier_parity": true,
+        "exact_supply_parity": true
+      }
+    },
+    {
+      "scenario": "serving_store_outage_safe_fallback_and_full_rebuild",
+      "status": "PASS",
+      "duration_ms": 189.61,
+      "metrics": {
+        "fallback_multiplier": 1.0,
+        "keys_rebuilt": 180,
+        "rebuild_ms": 40.87,
+        "exact_parity": true
+      }
+    },
+    {
+      "scenario": "out_of_order_driver_location_rejected",
+      "status": "PASS",
+      "duration_ms": 18.94,
+      "metrics": {
+        "stale_ignored": 1,
+        "authoritative_cell": "872a103b1ffffff"
+      }
+    },
+    {
+      "scenario": "duplicate_event_burst_idempotency",
+      "status": "PASS",
+      "duration_ms": 17.77,
+      "metrics": {
+        "duplicates_injected": 9,
+        "duplicates_suppressed": 9
+      }
+    },
+    {
+      "scenario": "reservation_and_heartbeat_timers",
+      "status": "PASS",
+      "duration_ms": 18.88,
+      "metrics": {
+        "reserved_released": true,
+        "stale_evicted": true
+      }
+    },
+    {
+      "scenario": "stale_serving_store_version_rejected",
+      "status": "PASS",
+      "duration_ms": 1.95,
+      "metrics": {
+        "stored_version": 10,
+        "preserved_multiplier": 1.75
+      }
+    },
+    {
+      "scenario": "serving_drift_detection_and_repair",
+      "status": "PASS",
+      "duration_ms": 489.19,
+      "metrics": {
+        "injected_drift": 3,
+        "repaired": 3
+      }
+    },
+    {
+      "scenario": "hot_h3_cell_skew_and_poison_quarantine",
+      "status": "PASS",
+      "duration_ms": 34.26,
+      "metrics": {
+        "hot_cell_requests": 120,
+        "poison_quarantined": 15,
+        "clamped_multiplier": 2.95
+      }
+    }
+  ]
+}

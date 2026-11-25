@@ -1,0 +1,5 @@
+h3_resolution,avg_hex_area_km2,events_processed,active_h3_cells,driver_cell_transfers,zero_supply_cell_pct,surged_cell_pct,max_hot_cell_demand,avg_pricing_multiplier,stream_process_ms,checkpoint_ms,serving_kv_keys,serving_materialize_ms,kv_lookup_p95_ms
+6,36.13,20696,59,1274,45.76,74.58,415,1.95,292.23,15.02,177,38.39,0.0727
+7,5.16,20696,195,2601,73.33,53.33,158,1.602,279.14,15.68,585,108.48,0.0822
+8,0.74,20696,449,4219,85.08,34.74,69,1.536,308.72,14.97,1347,232.81,0.0773
+9,0.11,20696,986,4607,92.7,40.97,14,1.505,310.29,16.28,2958,463.78,0.0704

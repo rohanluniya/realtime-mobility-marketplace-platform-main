@@ -1,0 +1,4 @@
+# Container-isolated Python pins for Apache Spark 4.1.4 + Iceberg 1.12.0 workers
+pyspark==4.1.4
+h3==4.5.0
+pyarrow==25.0.1

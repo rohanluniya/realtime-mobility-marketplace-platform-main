@@ -1,0 +1,21 @@
+{
+  "type": "record",
+  "name": "CellAggregateEvent",
+  "namespace": "io.marketplace.events.v1",
+  "doc": "Geospatial H3 demand/supply snapshot aggregate.",
+  "fields": [
+    {"name": "aggregate_id", "type": "string"},
+    {"name": "aggregate_kind", "type": "string"},
+    {"name": "city_id", "type": "string"},
+    {"name": "region_id", "type": "string"},
+    {"name": "h3_cell", "type": "string"},
+    {"name": "h3_resolution", "type": "int"},
+    {"name": "window_start", "type": "string"},
+    {"name": "window_end", "type": "string"},
+    {"name": "active_count", "type": "int"},
+    {"name": "neighbor_count", "type": "int"},
+    {"name": "state_version", "type": "long"},
+    {"name": "emitted_at", "type": "string"},
+    {"name": "schema_version", "type": "string", "default": "1.0.0"}
+  ]
+}

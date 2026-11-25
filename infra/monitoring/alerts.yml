@@ -1,0 +1,52 @@
+groups:
+  - name: marketplace_reliability_and_pricing_alerts
+    rules:
+      - alert: MarketplacePricingServingStoreErrors
+        expr: increase(marketplace_serving_store_errors_total{reason="store_unavailable"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          domain: serving
+        annotations:
+          summary: "Serving state store unavailable; pricing API fell back to 1.0x baseline"
+          runbook: "docs/reliability.md#serving-store-outage-and-rebuild"
+
+      - alert: MarketplaceDLQSpike
+        expr: increase(marketplace_dlq_messages_total[5m]) > 25
+        for: 2m
+        labels:
+          severity: warning
+          domain: ingestion
+        annotations:
+          summary: "Elevated dead-letter quarantine volume detected"
+          runbook: "docs/reliability.md#dead-letter-quarantine-triage"
+
+      - alert: MarketplaceDataQualityFailure
+        expr: increase(marketplace_dq_checks_total{status="FAIL"}[15m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          domain: data_quality
+        annotations:
+          summary: "One or more Iceberg / streaming invariant DQ checks failed"
+          runbook: "docs/reliability.md#data-quality-failure-response"
+
+      - alert: MarketplaceServingDriftDetected
+        expr: increase(marketplace_reconciliation_drift_corrected_total[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          domain: reconciliation
+        annotations:
+          summary: "Serving store vs Iceberg Gold drift detected and auto-repaired"
+          runbook: "docs/reliability.md#serving-reconciliation"
+
+      - alert: MarketplaceHighPricingLookupLatency
+        expr: histogram_quantile(0.95, rate(marketplace_serving_store_latency_seconds_bucket{operation="get"}[5m])) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+          domain: serving
+        annotations:
+          summary: "Serving KV p95 lookup latency exceeded 50ms SLO"
+          runbook: "docs/reliability.md#latency-slo-investigation"

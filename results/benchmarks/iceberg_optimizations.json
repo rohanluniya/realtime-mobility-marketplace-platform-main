@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "executed_at_utc": "2026-11-25T02:02:12.899063+00:00",
+    "execution_profile": "local_native",
+    "os": "Darwin 24.6.0",
+    "arch": "arm64",
+    "python_version": "3.12.8"
+  },
+  "optimizations": {
+    "compaction": {
+      "files_before": 6,
+      "files_after": 1,
+      "bytes_before": 6106482,
+      "bytes_after": 2444160,
+      "storage_reduction_pct": 59.97,
+      "scan_uncompacted_ms": 16.34,
+      "scan_compacted_ms": 12.74,
+      "compaction_duration_ms": 62.18,
+      "records_preserved": 124146
+    },
+    "city_filter_pruning": {
+      "full_scan_ms": 14.17,
+      "nyc_filtered_scan_ms": 14.68,
+      "full_groups": 51,
+      "nyc_groups": 17
+    },
+    "hot_h3_skew_salting": {
+      "unsalted_agg_ms": 10.95,
+      "salted_8way_agg_ms": 11.62,
+      "cells_verified": 195,
+      "exact_parity": true,
+      "note": "Salting adds a two-stage shuffle overhead on single-node DuckDB (<1k cells) and pays off only on distributed multi-node Spark clusters with severe partition skew."
+    }
+  }
+}

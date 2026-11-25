@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marketplace Control Tower · Real-Time Mobility &amp; Dynamic Pricing Platform</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <div class="synthetic-banner">
+    <span>SYNTHETIC SIMULATION DATA · Multi-city H3 marketplace telemetry &amp; dynamic pricing generated deterministically. Public views strictly aggregated at H3 resolution-7 (zero individual rider/driver traces).</span>
+    <span id="serving-tier-pill" class="pill pill-info">LIVE KV + ICEBERG V2</span>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-hex">H3</div>
+      <div>
+        <h1>Marketplace Control Tower</h1>
+        <p class="subtitle">Real-Time Supply-Demand State · Multi-Entity Joins · Explainable Dynamic Pricing</p>
+      </div>
+    </div>
+
+    <div class="controls">
+      <label class="control-group">
+        <span>Metro City</span>
+        <select id="city-select">
+          <option value="nyc" selected>New York City (us_east)</option>
+          <option value="sf">San Francisco (us_west)</option>
+          <option value="london">London (eu_west)</option>
+          <option value="">All Cities (Global)</option>
+        </select>
+      </label>
+
+      <label class="control-group">
+        <span>Service Tier</span>
+        <select id="service-select">
+          <option value="">All Service Tiers</option>
+          <option value="standard">Standard</option>
+          <option value="comfort">Comfort</option>
+          <option value="xl">XL Group</option>
+        </select>
+      </label>
+
+      <div class="freshness-box">
+        <span class="dot dot-live" id="health-dot"></span>
+        <div>
+          <div class="freshness-label" id="health-status">HEALTHY</div>
+          <div class="freshness-ts" id="freshness-ts">Syncing...</div>
+        </div>
+      </div>
+
+      <button id="refresh-btn" class="btn-primary" type="button">Refresh Live</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- View 1: Live Overview KPI Strip -->
+    <section class="kpi-grid" aria-label="Live Overview KPIs">
+      <article class="kpi-card">
+        <div class="kpi-label">Active H3 Cells <span class="tier-tag kv">KV</span></div>
+        <div class="kpi-value" id="kpi-cells">--</div>
+        <div class="kpi-sub" id="kpi-surged">-- surged (&gt;1.2x)</div>
+      </article>
+      <article class="kpi-card">
+        <div class="kpi-label">Available Drivers <span class="tier-tag kv">KV</span></div>
+        <div class="kpi-value" id="kpi-drivers">--</div>
+        <div class="kpi-sub" id="kpi-requests">-- total requests</div>
+      </article>
+      <article class="kpi-card">
+        <div class="kpi-label">Match Success Rate <span class="tier-tag ice">ICEBERG</span></div>
+        <div class="kpi-value accent-teal" id="kpi-match">--</div>
+        <div class="kpi-sub" id="kpi-matched-cnt">-- matched</div>
+      </article>
+      <article class="kpi-card">
+        <div class="kpi-label">Trip Completion Rate <span class="tier-tag ice">ICEBERG</span></div>
+        <div class="kpi-value accent-green" id="kpi-completion">--</div>
+        <div class="kpi-sub" id="kpi-completed-cnt">-- completed trips</div>
+      </article>
+      <article class="kpi-card">
+        <div class="kpi-label">Dynamic Multiplier <span class="tier-tag kv">KV</span></div>
+        <div class="kpi-value accent-amber" id="kpi-multiplier">--</div>
+        <div class="kpi-sub" id="kpi-max-mult">Peak -- (Cap 3.00x)</div>
+      </article>
+      <article class="kpi-card">
+        <div class="kpi-label">Liquidity Score <span class="tier-tag ice">GOLD</span></div>
+        <div class="kpi-value accent-blue" id="kpi-liquidity">--</div>
+        <div class="kpi-sub" id="kpi-lookup-ms">Serving lookup -- ms</div>
+      </article>
+    </section>
+
+    <!-- Views 2, 3, 4, 5: Multi-Layer Interactive H3 Geospatial Map + Live Pricing Inspector -->
+    <section class="panel map-section">
+      <div class="panel-header">
+        <div>
+          <h2>Geospatial H3 Marketplace Map <span class="badge">Resolution 7 (~5.16 km²/hex)</span></h2>
+          <p class="panel-desc">Switch live serving layers across Demand, Supply, Supply-Demand Imbalance, and Dynamic Pricing. Click any hexagon to audit pricing explainability.</p>
+        </div>
+        <div class="layer-tabs" role="tablist" aria-label="H3 Map Layer">
+          <button class="tab-btn active" data-layer="pricing" type="button">Dynamic Pricing</button>
+          <button class="tab-btn" data-layer="imbalance" type="button">Imbalance Ratio</button>
+          <button class="tab-btn" data-layer="demand" type="button">Demand Heatmap</button>
+          <button class="tab-btn" data-layer="supply" type="button">Supply Heatmap</button>
+        </div>
+      </div>
+
+      <div class="map-workspace">
+        <div class="map-canvas-wrap">
+          <svg id="h3-map-svg" viewBox="0 0 920 500" preserveAspectRatio="xMidYMid meet" aria-label="H3 Geospatial Heatmap"></svg>
+          <div class="map-legend" id="map-legend"></div>
+          <div class="map-tooltip hidden" id="map-tooltip"></div>
+        </div>
+
+        <aside class="inspector-card" aria-label="Selected H3 Cell Pricing Audit">
+          <div class="inspector-head">
+            <h3>H3 Cell Pricing Audit</h3>
+            <span class="tier-tag kv">LIVE KV</span>
+          </div>
+          <div id="cell-inspector-body" class="inspector-body">
+            <p class="muted">Select a hexagon on the map to inspect demand, 1-ring neighbor supply, imbalance ratio, and exact policy reason codes.</p>
+          </div>
+          <div class="inspector-divider"></div>
+          <h4>Top Surge &amp; Imbalance Hotspots</h4>
+          <div id="hotspots-list" class="hotspots-list"></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Views 6 & 7: Matching Funnel & Driver Utilization / Metro Districts -->
+    <section class="two-col">
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Matching Conversion Funnel <span class="tier-tag ice">ICEBERG GOLD</span></h2>
+            <p class="panel-desc">End-to-end stateful multi-entity join across requests, dispatch offers, and trip lifecycles.</p>
+          </div>
+        </div>
+        <div id="funnel-bars" class="funnel-bars"></div>
+        <div class="mini-metrics" id="funnel-latencies"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Driver Utilization &amp; H3-Res5 Districts <span class="tier-tag kv">LIVE STATE</span></h2>
+            <p class="panel-desc">Authoritative 7-state driver machine counts (zero double-counting) and coarse H3 res-5 rollups.</p>
+          </div>
+        </div>
+        <div id="driver-state-bars" class="state-bars"></div>
+        <h3 class="subhead">Top Metro Districts (H3 Resolution 5 Rollup)</h3>
+        <div class="table-scroll">
+          <table class="data-table" id="districts-table">
+            <thead>
+              <tr>
+                <th>City</th>
+                <th>H3-Res5 District</th>
+                <th>Res7 Cells</th>
+                <th>Demand</th>
+                <th>Supply</th>
+                <th>Avg / Max Mult</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <!-- Views 8 & 9: Trip Lifecycle Metrics & Pricing Experiments / SRM -->
+    <section class="two-col">
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Trip Lifecycle &amp; Service Tier Metrics <span class="tier-tag ice">ICEBERG SILVER</span></h2>
+            <p class="panel-desc">Completion, rider vs. driver cancellations, pickup ETA, and matching speed by city and tier.</p>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table" id="trips-table">
+            <thead>
+              <tr>
+                <th>City</th>
+                <th>Tier</th>
+                <th>Requests</th>
+                <th>Match %</th>
+                <th>Accept %</th>
+                <th>Completed</th>
+                <th>Cancellations (R/D)</th>
+                <th>Avg ETA</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Pricing Experiments &amp; SRM Validation <span class="tier-tag ice">H3 CLUSTER A/B</span></h2>
+            <p class="panel-desc">Deterministic H3-cluster randomization comparing Control (policy-v1.0) vs. Treatment (policy-v2.0-smoothed).</p>
+          </div>
+          <span id="srm-badge" class="pill pill-pass">SRM PASS</span>
+        </div>
+        <div id="experiment-cards" class="exp-grid"></div>
+        <div id="experiment-lift" class="lift-bar"></div>
+        <h3 class="subhead">Pricing Policy CDC History (SCD Type 2)</h3>
+        <div class="table-scroll">
+          <table class="data-table" id="policy-table">
+            <thead>
+              <tr>
+                <th>Region</th>
+                <th>Policy Version</th>
+                <th>Bounds</th>
+                <th>Alpha</th>
+                <th>Neighbor Wt</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <!-- Views 10, 11, 12: Streaming Health, Data Quality & Governance, Incident & Reconciliation -->
+    <section class="three-col">
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Streaming &amp; Serving Health <span class="tier-tag kv">OBS</span></h2>
+            <p class="panel-desc">Durable topic lag, stream state checkpoints, serving KV store, and Iceberg V2 catalog stats.</p>
+          </div>
+        </div>
+        <div id="platform-summary-grid" class="stat-grid"></div>
+        <div class="table-scroll">
+          <table class="data-table compact" id="topics-table">
+            <thead>
+              <tr>
+                <th>Topic</th>
+                <th>Parts</th>
+                <th>Records</th>
+                <th>Lag</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Data Quality &amp; Invariants <span class="tier-tag ice">DQ SUITE</span></h2>
+            <p class="panel-desc">Automated schema, uniqueness, policy-cap, zero-double-count, and cross-layer checks.</p>
+          </div>
+          <span id="dq-overall-badge" class="pill pill-pass">--</span>
+        </div>
+        <div id="dq-list" class="dq-list"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Incident &amp; Reconciliation Monitor <span class="tier-tag kv">SRE</span></h2>
+            <p class="panel-desc">Serving-vs-Iceberg consistency audit, fallback guardrails, DLQ quarantine, and chaos drills.</p>
+          </div>
+          <span id="recon-badge" class="pill pill-pass">CONSISTENT</span>
+        </div>
+        <div id="incident-monitor-body" class="incident-body"></div>
+      </article>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Real-Time Mobility Marketplace &amp; Dynamic Pricing Platform · 100% Open-Source Stack (Kafka · Flink · Spark · Iceberg V2 · Valkey · Trino · DuckDB · FastAPI)</span>
+    <span id="footer-lineage">OpenLineage Events: --</span>
+  </footer>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>

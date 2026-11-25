@@ -1,0 +1,75 @@
+{
+  "metadata": {
+    "executed_at_utc": "2026-11-25T02:02:12.899063+00:00",
+    "execution_profile": "local_native",
+    "os": "Darwin 24.6.0",
+    "arch": "arm64",
+    "python_version": "3.12.8"
+  },
+  "resolutions": [
+    {
+      "h3_resolution": 6,
+      "avg_hex_area_km2": 36.13,
+      "events_processed": 20696,
+      "active_h3_cells": 59,
+      "driver_cell_transfers": 1274,
+      "zero_supply_cell_pct": 45.76,
+      "surged_cell_pct": 74.58,
+      "max_hot_cell_demand": 415,
+      "avg_pricing_multiplier": 1.95,
+      "stream_process_ms": 292.23,
+      "checkpoint_ms": 15.02,
+      "serving_kv_keys": 177,
+      "serving_materialize_ms": 38.39,
+      "kv_lookup_p95_ms": 0.0727
+    },
+    {
+      "h3_resolution": 7,
+      "avg_hex_area_km2": 5.16,
+      "events_processed": 20696,
+      "active_h3_cells": 195,
+      "driver_cell_transfers": 2601,
+      "zero_supply_cell_pct": 73.33,
+      "surged_cell_pct": 53.33,
+      "max_hot_cell_demand": 158,
+      "avg_pricing_multiplier": 1.602,
+      "stream_process_ms": 279.14,
+      "checkpoint_ms": 15.68,
+      "serving_kv_keys": 585,
+      "serving_materialize_ms": 108.48,
+      "kv_lookup_p95_ms": 0.0822
+    },
+    {
+      "h3_resolution": 8,
+      "avg_hex_area_km2": 0.74,
+      "events_processed": 20696,
+      "active_h3_cells": 449,
+      "driver_cell_transfers": 4219,
+      "zero_supply_cell_pct": 85.08,
+      "surged_cell_pct": 34.74,
+      "max_hot_cell_demand": 69,
+      "avg_pricing_multiplier": 1.536,
+      "stream_process_ms": 308.72,
+      "checkpoint_ms": 14.97,
+      "serving_kv_keys": 1347,
+      "serving_materialize_ms": 232.81,
+      "kv_lookup_p95_ms": 0.0773
+    },
+    {
+      "h3_resolution": 9,
+      "avg_hex_area_km2": 0.11,
+      "events_processed": 20696,
+      "active_h3_cells": 986,
+      "driver_cell_transfers": 4607,
+      "zero_supply_cell_pct": 92.7,
+      "surged_cell_pct": 40.97,
+      "max_hot_cell_demand": 14,
+      "avg_pricing_multiplier": 1.505,
+      "stream_process_ms": 310.29,
+      "checkpoint_ms": 16.28,
+      "serving_kv_keys": 2958,
+      "serving_materialize_ms": 463.78,
+      "kv_lookup_p95_ms": 0.0704
+    }
+  ]
+}

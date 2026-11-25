@@ -1,0 +1,41 @@
+FROM python:3.12.8-slim-bookworm
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    MARKETPLACE_ENV=docker_standalone \
+    MARKETPLACE_EXECUTION_PROFILE=local_native \
+    MARKETPLACE_TRANSPORT_MODE=local_wal \
+    MARKETPLACE_SERVING_STORE=local_kv \
+    MARKETPLACE_API_HOST=0.0.0.0 \
+    MARKETPLACE_API_PORT=8010 \
+    MARKETPLACE_SIM_PROFILE=local
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml uv.lock README.md LICENSE ./
+COPY marketplace_platform ./marketplace_platform
+COPY schemas ./schemas
+COPY services ./services
+COPY apps ./apps
+COPY benchmarks ./benchmarks
+COPY scripts ./scripts
+
+RUN pip install --upgrade pip && pip install .
+
+RUN useradd --create-home --shell /bin/bash appuser && \
+    mkdir -p /app/.local_data && \
+    chown -R appuser:appuser /app && \
+    chmod +x /app/scripts/entrypoint_standalone.sh
+
+USER appuser
+
+EXPOSE 8010
+
+HEALTHCHECK --interval=20s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:8010/health || exit 1
+
+ENTRYPOINT ["/app/scripts/entrypoint_standalone.sh"]

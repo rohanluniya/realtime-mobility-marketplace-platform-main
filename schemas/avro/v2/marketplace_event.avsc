@@ -1,0 +1,29 @@
+{
+  "type": "record",
+  "name": "MarketplaceEvent",
+  "namespace": "io.marketplace.events.v1",
+  "doc": "Backward- and forward-compatible v2 evolution adding optional service_type and experiment_bucket fields.",
+  "fields": [
+    {"name": "event_id", "type": "string"},
+    {"name": "event_type", "type": "string"},
+    {"name": "event_time", "type": "string"},
+    {"name": "producer_time", "type": "string"},
+    {"name": "ingestion_time", "type": ["null", "string"], "default": null},
+    {"name": "schema_version", "type": "string", "default": "2.0.0"},
+    {"name": "rider_id", "type": ["null", "string"], "default": null},
+    {"name": "driver_id", "type": ["null", "string"], "default": null},
+    {"name": "request_id", "type": ["null", "string"], "default": null},
+    {"name": "trip_id", "type": ["null", "string"], "default": null},
+    {"name": "region_id", "type": "string"},
+    {"name": "city_id", "type": "string"},
+    {"name": "latitude", "type": "double"},
+    {"name": "longitude", "type": "double"},
+    {"name": "correlation_id", "type": "string"},
+    {"name": "trace_id", "type": "string"},
+    {"name": "sequence_number", "type": ["null", "long"], "default": null},
+    {"name": "payload_json", "type": "string"},
+    {"name": "metadata", "type": {"type": "map", "values": "string"}, "default": {}},
+    {"name": "service_type", "type": ["null", "string"], "default": null},
+    {"name": "experiment_bucket", "type": ["null", "string"], "default": null}
+  ]
+}

@@ -1,0 +1,97 @@
+[project]
+name = "realtime-mobility-marketplace-platform"
+version = "0.1.0"
+description = "Open-source distributed data engineering platform for a real-time ride-hailing marketplace: stateful driver/rider state, H3 supply-demand intelligence, streaming joins, explainable dynamic pricing, low-latency Valkey serving, and Apache Iceberg lakehouse analytics."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "confluent-kafka==2.16.1",
+    "duckdb==2.0.0",
+    "fastapi==0.163.2",
+    "fastavro==1.13.1",
+    "h3==4.5.0",
+    "httpx==0.28.1",
+    "matplotlib==3.11.2",
+    "mmh3==5.3.1",
+    "numpy==2.5.5",
+    "opentelemetry-api==1.45.2",
+    "opentelemetry-sdk==1.45.2",
+    "prometheus-client==0.26.0",
+    "psutil==7.2.2",
+    "pyarrow==25.0.1",
+    "pydantic==2.14.3",
+    "pyiceberg[sql-sqlite,pyiceberg-core]==0.12.0",
+    "pyyaml==6.0.3",
+    "requests==2.34.2",
+    "shapely==2.2.0",
+    "sqlalchemy==2.1.9",
+    "uvicorn==0.54.0",
+    "valkey==6.2.0",
+    "zstandard==0.25.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy==2.4.1",
+    "pytest==9.2.0",
+    "pytest-asyncio==1.5.0",
+    "ruff==0.17.5",
+    "types-PyYAML>=6.0.12",
+]
+# Container-isolated engine pins (apache-flink==2.1.3 requires pyarrow<21; pyspark==4.1.4 and
+# apache-airflow==3.4.0 run in dedicated containers) live in infra/docker/requirements-*.txt.
+
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "marketplace_platform",
+    "apps",
+    "services",
+    "streaming",
+    "pipelines",
+]
+
+[tool.uv]
+managed = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+exclude = [".venv", ".local_data", ".tools"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "SIM"]
+ignore = ["E501", "B008", "SIM105"]
+
+[tool.ruff.lint.per-file-ignores]
+"apps/marketplace-api/main.py" = ["E402"]
+"services/**/*.py" = ["E402"]
+"streaming/**/*.py" = ["E402"]
+"pipelines/**/*.py" = ["E402", "F841"]
+"benchmarks/**/*.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+exclude = ["^\\.venv/", "^\\.local_data/"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-q --tb=short"
+markers = [
+    "unit: fast pure-Python unit tests",
+    "contract: Avro schema contract & compatibility tests",
+    "integration: Iceberg, CDC, streaming join, and E2E tests",
+    "chaos: controlled fault-injection and recovery tests",
+    "performance: load, H3 resolution, and optimization benchmarks",
+]
